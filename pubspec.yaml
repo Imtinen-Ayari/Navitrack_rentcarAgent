@@ -1,0 +1,57 @@
+name: rent_car  # Nom de ton projet Flutter
+description: "A new Flutter project."  # Description courte du projet
+
+publish_to: 'none'  # Empêche la publication du package sur pub.dev (utile pour projets privés)
+
+version: 1.0.0+1  # Version de l'application et numéro de build
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"  # Version minimum et maximum du SDK Dart requise (ici Dart 3.x)
+
+dependencies:  # Liste des packages nécessaires à ton application
+  flutter:
+    sdk: flutter  # Dépendance au SDK Flutter
+  font_awesome_flutter: ^10.0.0  # Icônes FontAwesome pour Flutter
+  connectivity_plus: ^4.0.1  # Gestion de la connectivité réseau
+  http: ^0.13.6  # Requêtes HTTP
+  flutter_secure_storage: ^9.0.0  # Stockage sécurisé (ex: pour token)
+  intl: ^0.17.0  # Internationalisation et formatage des dates/nombres
+  searchfield: ^0.9.0 # Widget pour barre de recherche avec suggestions
+  cupertino_icons: ^1.0.8  # Icônes iOS style Cupertino
+  get: ^4.6.6  # Gestion d'état et routage simple
+  google_maps_flutter: ^2.7.0  # Intégration de Google Maps
+  rxdart: ^0.28.0  # Extensions pour la programmation réactive
+  responsive_sizer: ^3.3.1  # Adaptation de l'UI à différentes tailles d'écran
+  path_provider: ^2.1.3  # Accès aux dossiers spécifiques (documents, temp, etc.)
+  eventsource: ^0.4.0  # Pour utiliser EventSource (SSE)
+  image_picker: ^1.0.4 #prendre des photos d'après la caméra
+  firebase_core: ^2.25.0
+  firebase_storage: ^11.6.6
+  path: ^1.8.3
+  another_flushbar: ^1.10.28
+  google_fonts: 4.0.4
+
+  
+dev_dependencies:  # Dépendances nécessaires uniquement au développement et tests
+  flutter_test:
+    sdk: flutter  # Package pour tests unitaires Flutter
+  flutter_lints: ^5.0.0  # Ensemble de règles de linting recommandées pour Flutter
+
+flutter:  # Section spécifique à Flutter
+  uses-material-design: true  # Inclut la police Material Icons dans l'app
+  assets:  # Liste des ressources/images à inclure dans l'app
+    - assets/  # Dossier assets complet
+    - assets/car.png  # Image spécifique
+    - assets/Car1.png  # Image spécifique
+fonts:
+  - family: PlaywrightCU
+    fonts:
+      - asset: assets/Fonts/Playwrite_CU/PlaywriteCU-VariableFont_wght.ttf
+  - family: Inter
+    fonts:
+      - asset: assets/Fonts/Inter/Inter-VariableFont_slnt,wght.ttf
+  - family: PlusJakartaSans
+    fonts:
+      - asset: assets/Fonts/PlusJakartaSans/PlusJakartaSans-Regular.ttf
+      - asset: assets/Fonts/PlusJakartaSans/PlusJakartaSans-Bold.ttf
+        weight: 700
