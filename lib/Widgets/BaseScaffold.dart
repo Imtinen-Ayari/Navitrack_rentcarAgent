@@ -1,105 +1,4 @@
-/*import 'package:flutter/material.dart';
-import 'package:rent_car/Pages/SelectDatePage.dart';
-import 'package:rent_car/Pages/HomePage.dart';
-import 'package:rent_car/Pages/ProfilePage.dart';
-import 'package:rent_car/Pages/ReportsListPage.dart';
-import 'package:rent_car/Pages/VehiculeListePage.dart';
-
-class BaseScaffold extends StatelessWidget {
-  final Widget body;
-  final int currentIndex;
-  final PreferredSizeWidget? appBar;
-
-  const BaseScaffold({
-    super.key,
-    required this.body,
-    required this.currentIndex,
-    this.appBar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Color activeColor = const Color(0xFF0060FC);
-    Color inactiveColor = Colors.grey;
-
-    Widget _navItem(IconData icon, int index, VoidCallback onTap) {
-      return IconButton(
-        icon: Icon(
-          icon,
-          color: currentIndex == index ? activeColor : inactiveColor,
-        ),
-        onPressed: onTap,
-        iconSize: 30,
-      );
-    }
-
-    return Scaffold(
-      appBar: appBar,
-      body: body,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: activeColor,
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SelectDatePage()),
-          );
-        },
-        child: const Icon(Icons.add, size: 32),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        color: Colors.white,
-        elevation: 10,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _navItem(Icons.home_rounded, 0, () {
-                if (currentIndex != 0) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HomePage()),
-                  );
-                }
-              }),
-              _navItem(Icons.insert_chart, 1, () {
-                if (currentIndex != 1) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const ReportsPage()),
-                  );
-                }
-              }),
-              const SizedBox(width: 48), // espace pour le FAB
-              _navItem(Icons.view_list, 2, () {
-                if (currentIndex != 2) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => VehiculeListePage()),
-                  );
-                }
-              }),
-              _navItem(Icons.account_circle_rounded, 3, () {
-                if (currentIndex != 3) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const ProfilePage()),
-                  );
-                }
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+/*
 import 'package:flutter/material.dart';
 import 'package:rent_car/Pages/ContractDetails.dart';
 import 'package:rent_car/Pages/HomePage.dart';
@@ -114,26 +13,38 @@ class BaseScaffold extends StatelessWidget {
   final int currentIndex;
   final String title;
   final bool showBackButton;
+  final bool showFab;
 
   const BaseScaffold({
     super.key,
     required this.body,
     required this.currentIndex,
     required this.title,
-    this.showBackButton = false, // false par défaut (pas de retour sur home)
+    this.showBackButton = false,
+    this.showFab = true,
   });
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return AppBar(
       elevation: 0,
       flexibleSpace: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0060FC), Color(0xFF4D9EF6)],
+            colors: isDark
+                ? [
+                    const Color(0xFF1F1F1F), // gris foncé
+                    const Color(0xFF2D2D2D), // gris plus clair
+                  ]
+                : [
+                    const Color(0xFF0060FC), // bleu
+                    const Color(0xFF4D9EF6), // bleu clair
+                  ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(0)),
         ),
       ),
       toolbarHeight: 100,
@@ -142,6 +53,8 @@ class BaseScaffold extends StatelessWidget {
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
+          fontFamily: 'PlusJakartaSans',
+          fontSize: 20,
         ),
       ),
       centerTitle: true,
@@ -157,8 +70,13 @@ class BaseScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color activeColor = const Color(0xFF0060FC);
-    Color inactiveColor = Colors.grey;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // couleurs dynamiques
+    Color activeColor = Theme.of(context).colorScheme.primary;
+    Color inactiveColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    Color bottomBarColor = isDark ? const Color(0xFF2D2D2D) : Colors.white;
+    Color fabColor = Theme.of(context).colorScheme.primary;
 
     Widget _navItem(IconData icon, int index, VoidCallback onTap) {
       return IconButton(
@@ -176,23 +94,31 @@ class BaseScaffold extends StatelessWidget {
     }
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(context),
       body: body,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: activeColor,
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SelectDatePage()),
-          );
-        },
-        child: const Icon(Icons.add, size: 32),
-      ),
+      floatingActionButton: showFab
+          ? FloatingActionButton(
+              backgroundColor: fabColor,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const SelectDatePage()),
+                );
+              },
+              child: const Icon(
+                Icons.add,
+                size: 32,
+                color: Colors.white,
+              ),
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8,
-        color: Colors.white,
+        color: bottomBarColor,
         elevation: 10,
         child: SizedBox(
           height: 60,
@@ -230,7 +156,7 @@ class BaseScaffold extends StatelessWidget {
       ),
     );
   }
-} */
+}*/
 import 'package:flutter/material.dart';
 import 'package:rent_car/Pages/ContractDetails.dart';
 import 'package:rent_car/Pages/HomePage.dart';
@@ -239,13 +165,14 @@ import 'package:rent_car/Pages/ReportsListPage.dart';
 import 'package:rent_car/Pages/SearchPage.dart';
 import 'package:rent_car/Pages/SelectDatePage.dart';
 import 'package:rent_car/Pages/VehiculeListePage.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class BaseScaffold extends StatelessWidget {
   final Widget body;
   final int currentIndex;
   final String title;
   final bool showBackButton;
-  final bool showFab; // ✅ on choisit si on montre le bouton flottant
+  final bool showFab;
 
   const BaseScaffold({
     super.key,
@@ -253,28 +180,41 @@ class BaseScaffold extends StatelessWidget {
     required this.currentIndex,
     required this.title,
     this.showBackButton = false,
-    this.showFab = true, // ✅ par défaut il s’affiche
+    this.showFab = true,
   });
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return AppBar(
       elevation: 0,
+      backgroundColor: Colors.transparent,
       flexibleSpace: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0060FC), Color(0xFF4D9EF6)],
+            colors: isDark
+                ? [
+                    const Color(0xFF1F1F1F), // gris foncé
+                    const Color(0xFF2D2D2D), // gris plus clair
+                  ]
+                : [
+                    const Color(0xFF0060FC), // bleu
+                    const Color(0xFF4D9EF6), // bleu clair
+                  ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+          borderRadius:
+              const BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
       ),
       toolbarHeight: 100,
       title: Text(
         title,
-        style: const TextStyle(
+        style: GoogleFonts.plusJakartaSans(
           color: Colors.white,
           fontWeight: FontWeight.bold,
+          fontSize: 20,
         ),
       ),
       centerTitle: true,
@@ -290,8 +230,13 @@ class BaseScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color activeColor = const Color(0xFF0060FC);
-    Color inactiveColor = Colors.grey;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // couleurs dynamiques
+    Color activeColor = isDark ? Colors.deepPurple[300]! : Color(0xFF0060FC)!;
+    Color inactiveColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    Color bottomBarColor = isDark ? const Color(0xFF2D2D2D) : Colors.white;
+    Color fabColor = Theme.of(context).primaryColor;
 
     Widget _navItem(IconData icon, int index, VoidCallback onTap) {
       return IconButton(
@@ -309,11 +254,12 @@ class BaseScaffold extends StatelessWidget {
     }
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(context),
       body: body,
       floatingActionButton: showFab
           ? FloatingActionButton(
-              backgroundColor: activeColor,
+              backgroundColor: fabColor,
               onPressed: () {
                 Navigator.push(
                   context,
@@ -321,14 +267,18 @@ class BaseScaffold extends StatelessWidget {
                       builder: (context) => const SelectDatePage()),
                 );
               },
-              child: const Icon(Icons.add, size: 32),
+              child: const Icon(
+                Icons.add,
+                size: 32,
+                color: Colors.white,
+              ),
             )
-          : null, // ✅ n’apparaît pas si showFab = false
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8,
-        color: Colors.white,
+        color: bottomBarColor,
         elevation: 10,
         child: SizedBox(
           height: 60,

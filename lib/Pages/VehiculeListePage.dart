@@ -1,494 +1,76 @@
-/*import 'package:flutter/material.dart';
-import 'package:rent_car/Models/Vehicule.dart';
-import 'package:rent_car/services/Contract_service.dart';
-import 'package:rent_car/services/Secure_Storage.dart';
-
-class VehiculeListePage extends StatefulWidget {
-  @override
-  _VehiculeListePageState createState() => _VehiculeListePageState();
-}
-
-class _VehiculeListePageState extends State<VehiculeListePage> {
-  Future<List<Vehicle>> loadVehicule() async {
-    try {
-      String? clientID = await readClientID();
-      String? token = await readToken();
-      if (clientID == null || token == null) {
-        print("token ou idclien manquant");
-        logout();
-        return [];
-      }
-      print("🔐 Token: $token");
-      print("👤 ClientID: $clientID");
-      final List<Vehicle> vehicules = await getVehiclesByUser(clientID, token);
-      return vehicules;
-    } catch (e) {
-      print("Error loading vehicule: $e");
-      throw e;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, size: 30),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          color: Colors.white,
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        title: const Text(
-          'Vehicle List',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        toolbarHeight: 100,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-        ),
-        elevation: 10,
-      ),
-      body: FutureBuilder<List<Vehicle>>(
-        future: loadVehicule(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error, size: 50, color: Colors.red),
-                  SizedBox(height: 10),
-                  Text(
-                    'Error loading Vehicles',
-                    style: TextStyle(fontSize: 18, color: Colors.red),
-                  )
-                ],
-              ),
-            );
-          } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-            final vehicules = snapshot.data!;
-            return ListView.builder(
-              padding: const EdgeInsets.only(top: 10),
-              itemCount: vehicules.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .secondary
-                          .withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const SizedBox(height: 8),
-                          Text(
-                            'Code Véhicule: ${vehicules[index].code}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Marque de véhicule: ${vehicules[index].marque}',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.directions_car_filled, size: 24),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Matricule: ${vehicules[index].matricule}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.directions_car, size: 24),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Modèle: ${vehicules[index].model}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.category, size: 24),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Type: ${vehicules[index].type}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          } else {
-            return const Center(
-              child: Text(
-                'Aucun véhicule trouvé.',
-                style: TextStyle(fontSize: 18),
-              ),
-            );
-          }
-        },
-      ),
-    );
-  }
-}
+/*
 import 'package:flutter/material.dart';
 import 'package:rent_car/Models/Vehicule.dart';
 import 'package:rent_car/services/Contract_service.dart';
 import 'package:rent_car/services/Secure_Storage.dart';
 import 'package:rent_car/Widgets/BaseScaffold.dart';
+import 'package:rent_car/Pages/BusMapPage.dart';
 
 class VehiculeListePage extends StatefulWidget {
+  const VehiculeListePage({super.key});
+
   @override
-  _VehiculeListePageState createState() => _VehiculeListePageState();
+  State<VehiculeListePage> createState() => _VehiculeListePageState();
 }
 
 class _VehiculeListePageState extends State<VehiculeListePage> {
   Future<List<Vehicle>> loadVehicule() async {
     try {
-      String? clientID = await readClientID();
-      String? token = await readToken();
-      if (clientID == null || token == null) {
-        print("token ou id client manquant");
-        logout();
-        return [];
-      }
-      final List<Vehicle> vehicules = await getVehiclesByUser(clientID, token);
-      return vehicules;
-    } catch (e) {
-      print("Erreur lors du chargement des véhicules: $e");
-      throw e;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BaseScaffold(
-      body: Column(
-        children: [
-          AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, size: 30),
-              onPressed: () => Navigator.pop(context),
-              color: Colors.white,
-            ),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            title: const Text(
-              'Vehicle List',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            toolbarHeight: 100,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-            ),
-            elevation: 10,
-          ),
-          Expanded(
-            child: FutureBuilder<List<Vehicle>>(
-              future: loadVehicule(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error, size: 50, color: Colors.red),
-                        SizedBox(height: 10),
-                        Text(
-                          'Error loading Vehicles',
-                          style: TextStyle(fontSize: 18, color: Colors.red),
-                        ),
-                      ],
-                    ),
-                  );
-                } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                  final vehicules = snapshot.data!;
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(10),
-                    itemCount: vehicules.length,
-                    itemBuilder: (context, index) {
-                      final vehicle = vehicules[index];
-                      return Container(
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .secondary
-                              .withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const SizedBox(height: 8),
-                            Text(
-                              'Code Véhicule: ${vehicules[index].code}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Marque de véhicule: ${vehicules[index].marque}',
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(Icons.directions_car_filled,
-                                    size: 24),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Matricule: ${vehicules[index].matricule}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(Icons.directions_car, size: 24),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Modèle: ${vehicules[index].model}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(Icons.category, size: 24),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Type: ${vehicules[index].type}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                } else {
-                  return const Center(
-                    child: Text(
-                      'Aucun véhicule trouvé.',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-import 'package:flutter/material.dart';
-import 'package:rent_car/Models/Vehicule.dart';
-import 'package:rent_car/services/Contract_service.dart';
-import 'package:rent_car/services/Secure_Storage.dart';
-import 'package:rent_car/Widgets/BaseScaffold.dart';
-
-class VehiculeListePage extends StatefulWidget {
-  @override
-  _VehiculeListePageState createState() => _VehiculeListePageState();
-}
-
-class _VehiculeListePageState extends State<VehiculeListePage> {
-  Future<List<Vehicle>> loadVehicule() async {
-    try {
-      String? clientID = await readClientID();
-      String? token = await readToken();
+      final clientID = await readClientID();
+      final token = await readToken();
 
       if (clientID == null || token == null) {
-        print("token ou id client manquant");
+        debugPrint("🔒 Token ou ID client manquant");
         logout();
         return [];
       }
 
       return await getVehiclesByUser(clientID, token);
     } catch (e) {
-      print("Erreur lors du chargement des véhicules: $e");
-      throw e;
+      debugPrint("❌ Erreur lors du chargement des véhicules: $e");
+      rethrow;
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return BaseScaffold(
-      currentIndex: 2,
-      title: 'Liste des Véhicules',
-      showBackButton: true, // ou false selon contexte
-      body: FutureBuilder<List<Vehicle>>(
-        future: loadVehicule(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error, size: 50, color: Colors.red),
-                  SizedBox(height: 10),
-                  Text(
-                    'Erreur lors du chargement des véhicules.',
-                    style: TextStyle(fontSize: 18, color: Colors.red),
-                  ),
-                ],
-              ),
-            );
-          } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-            final vehicules = snapshot.data!;
-            return ListView.builder(
-              padding: const EdgeInsets.all(10),
-              itemCount: vehicules.length,
-              itemBuilder: (context, index) {
-                final v = vehicules[index];
-                return Container(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .secondary
-                        .withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Code Véhicule: ${v.code}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Marque: ${v.marque}',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      _infoRow(Icons.directions_car_filled,
-                          'Matricule: ${v.matricule}'),
-                      _infoRow(Icons.directions_car, 'Modèle: ${v.model}'),
-                      _infoRow(Icons.category, 'Type: ${v.type}'),
-                    ],
-                  ),
-                );
-              },
-            );
-          } else {
-            return const Center(
-              child: Text(
-                'Aucun véhicule trouvé.',
-                style: TextStyle(fontSize: 18),
-              ),
-            );
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _infoRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 24),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 16),
-            ),
+  void _openBusMapNavigation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('BusMap Navigation'),
+        content: const Text('Ouvrir la navigation BusMap pour vos véhicules'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => BusMapPage()),
+              );
+            },
+            child: const Text('Ouvrir'),
           ),
         ],
       ),
     );
   }
-}*/
-import 'package:flutter/material.dart';
-import 'package:rent_car/Models/Vehicule.dart';
-import 'package:rent_car/services/Contract_service.dart';
-import 'package:rent_car/services/Secure_Storage.dart';
-import 'package:rent_car/Widgets/BaseScaffold.dart';
-
-class VehiculeListePage extends StatefulWidget {
-  @override
-  _VehiculeListePageState createState() => _VehiculeListePageState();
-}
-
-class _VehiculeListePageState extends State<VehiculeListePage> {
-  Future<List<Vehicle>> loadVehicule() async {
-    try {
-      String? clientID = await readClientID();
-      String? token = await readToken();
-
-      if (clientID == null || token == null) {
-        print("🔒 Token ou ID client manquant");
-        logout();
-        return [];
-      }
-
-      return await getVehiclesByUser(clientID, token);
-    } catch (e) {
-      print("❌ Erreur lors du chargement des véhicules: $e");
-      throw e;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return BaseScaffold(
       currentIndex: 2,
-      title: 'Mes Véhicules',
+      title: 'Vehicle Management',
       showBackButton: true,
       body: FutureBuilder<List<Vehicle>>(
         future: loadVehicule(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
+          }
+
+          if (snapshot.hasError) {
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -497,90 +79,426 @@ class _VehiculeListePageState extends State<VehiculeListePage> {
                   SizedBox(height: 10),
                   Text(
                     'Erreur lors du chargement des véhicules.',
-                    style: TextStyle(fontSize: 18, color: Colors.red),
-                  ),
-                ],
-              ),
-            );
-          } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-            final vehicules = snapshot.data!;
-            return ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: vehicules.length,
-              itemBuilder: (context, index) {
-                final v = vehicules[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.directions_car_filled, size: 28),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                '${v.marque} - ${v.model}',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _infoRow(Icons.tag, 'Code Véhicule : ${v.code}'),
-                        _infoRow(Icons.numbers, 'Matricule : ${v.matricule}'),
-                        _infoRow(Icons.category, 'Type : ${v.type}'),
-                      ],
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.red,
+                      fontFamily: 'PlusJakartaSans',
                     ),
-                  ),
-                );
-              },
-            );
-          } else {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.directions_car_filled,
-                      size: 60, color: Colors.grey),
-                  SizedBox(height: 10),
-                  Text(
-                    'Aucun véhicule trouvé.',
-                    style: TextStyle(fontSize: 18, color: Colors.black54),
                   ),
                 ],
               ),
             );
           }
+
+          if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+            final vehicules = snapshot.data!;
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: vehicules.length,
+                    itemBuilder: (context, index) {
+                      final vehicle = vehicules[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.directions_car,
+                                    size: 28,
+                                    color: Colors.blue,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      '${vehicle.marque} - ${vehicle.model}',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'PlusJakartaSans',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInfoRow(Icons.tag, 'Code', vehicle.code),
+                              const SizedBox(height: 8),
+                              _buildInfoRow(Icons.numbers, 'Matricule',
+                                  vehicle.matricule),
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                  Icons.category, 'Type', vehicle.type),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  child: ElevatedButton.icon(
+                    onPressed: _openBusMapNavigation,
+                    icon: const Icon(Icons.map),
+                    label: const Text(
+                      'BusMap Navigation',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.directions_car_filled,
+                  size: 60,
+                  color: Colors.grey,
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Aucun véhicule trouvé.',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.black54,
+                    fontFamily: 'PlusJakartaSans',
+                  ),
+                ),
+              ],
+            ),
+          );
         },
       ),
     );
   }
 
-  Widget _infoRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[700]),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 16),
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.grey[600]),
+        const SizedBox(width: 10),
+        Text(
+          '$label : ',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+            fontFamily: 'PlusJakartaSans',
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'PlusJakartaSans',
+          ),
+        ),
+      ],
+    );
+  }
+}*/
+import 'package:flutter/material.dart';
+import 'package:rent_car/Models/Vehicule.dart';
+import 'package:rent_car/services/Contract_service.dart';
+import 'package:rent_car/services/Secure_Storage.dart';
+import 'package:rent_car/Widgets/BaseScaffold.dart';
+import 'package:rent_car/Pages/BusMapPage.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class VehiculeListePage extends StatefulWidget {
+  const VehiculeListePage({super.key});
+
+  @override
+  State<VehiculeListePage> createState() => _VehiculeListePageState();
+}
+
+class _VehiculeListePageState extends State<VehiculeListePage> {
+  Future<List<Vehicle>> loadVehicule() async {
+    try {
+      final clientID = await readClientID();
+      final token = await readToken();
+
+      if (clientID == null || token == null) {
+        debugPrint("🔒 Token ou ID client manquant");
+        logout();
+        return [];
+      }
+
+      return await getVehiclesByUser(clientID, token);
+    } catch (e) {
+      debugPrint("❌ Erreur lors du chargement des véhicules: $e");
+      rethrow;
+    }
+  }
+
+  void _openBusMapNavigation() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+          title: Text(
+            'BusMap Navigation',
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
-        ],
+          content: Text(
+            'Ouvrir la navigation BusMap pour vos véhicules',
+            style: GoogleFonts.plusJakartaSans(
+              color: isDark ? Colors.grey[300] : Colors.black87,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Annuler',
+                style: GoogleFonts.plusJakartaSans(
+                  color: isDark ? Colors.grey[400] : Colors.blue,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? const Color(0xFF8B5CF6) : Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => BusMapPage()),
+                );
+              },
+              child: Text(
+                'Ouvrir',
+                style: GoogleFonts.plusJakartaSans(),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return BaseScaffold(
+      currentIndex: 2,
+      title: 'Gestion des véhicules',
+      showBackButton: true,
+      body: FutureBuilder<List<Vehicle>>(
+        future: loadVehicule(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            // ✅ CircularProgressIndicator adapté au mode sombre
+            return Center(
+              child: CircularProgressIndicator(
+                color: isDark
+                    ? const Color.fromARGB(255, 60, 59, 59)
+                    : Theme.of(context).primaryColor,
+              ),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 50, color: Colors.red),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Erreur lors du chargement des véhicules.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 18,
+                      color: Colors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+            final vehicules = snapshot.data!;
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: vehicules.length,
+                    itemBuilder: (context, index) {
+                      final vehicle = vehicules[index];
+                      return Card(
+                        color: isDark ? const Color(0xFF2D2D2D) : Colors.white,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        elevation: isDark ? 0 : 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: isDark
+                                ? Colors.grey.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.directions_car,
+                                    size: 28,
+                                    color: isDark
+                                        ? const Color(0xFF8B5CF6)
+                                        : Colors.blue,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      '${vehicle.marque} - ${vehicle.model}',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInfoRow(Icons.tag, 'Code', vehicle.code,
+                                  isDark: isDark),
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                  Icons.numbers, 'Matricule', vehicle.matricule,
+                                  isDark: isDark),
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                  Icons.category, 'Type', vehicle.type,
+                                  isDark: isDark),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  child: ElevatedButton.icon(
+                    onPressed: _openBusMapNavigation,
+                    icon: const Icon(Icons.map),
+                    label: Text(
+                      'Navigation BusMap',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          isDark ? const Color(0xFF8B5CF6) : Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          // Cas où aucune donnée
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.directions_car_filled,
+                  size: 60,
+                  color: isDark ? Colors.grey[500] : Colors.grey,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Aucun véhicule trouvé.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 18,
+                    color: isDark ? Colors.grey[400] : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value,
+      {required bool isDark}) {
+    return Row(
+      children: [
+        Icon(icon,
+            size: 20, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+        const SizedBox(width: 10),
+        Text(
+          '$label : ',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 14,
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+      ],
     );
   }
 }

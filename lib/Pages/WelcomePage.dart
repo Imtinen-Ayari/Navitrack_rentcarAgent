@@ -16,7 +16,7 @@ class WelcomePage extends StatelessWidget {
               children: [
                 const SizedBox(height: 50),
                 const Text(
-                  'Welcome',
+                  'Bienvenue',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -50,13 +50,19 @@ class WelcomePage extends StatelessWidget {
                         fontSize: 16, height: 1.6, color: Colors.black),
                     children: [
                       const TextSpan(
-                        text: 'Hi there,\n\n',
-                        style: TextStyle(fontWeight: FontWeight.w500),
+                        text: 'Bonjour,\n\n',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
                       ),
                       const TextSpan(
                         text:
-                            'Efficiently manage your vehicles, contracts, and condition reportswith ease and security.',
-                        style: TextStyle(fontWeight: FontWeight.w500),
+                            'Gérez efficacement vos véhicules, contrats et rapports d’état en toute simplicité et sécurité.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
                       ),
                     ],
                   ),
@@ -79,8 +85,9 @@ class WelcomePage extends StatelessWidget {
                     shadowColor: const Color(0xFF003FAD),
                   ),
                   child: const Text(
-                    'Get Started',
+                    'Commencer',
                     style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
