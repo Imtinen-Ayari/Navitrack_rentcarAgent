@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:rent_car/Models/Agent.dart';
-import 'package:rent_car/services/Secure_Storage.dart'; // Import the file
+import 'package:rent_car/services/Secure_Storage.dart';
 
 class AgentProvider extends ChangeNotifier {
   Agent? _currentAgent;
@@ -13,26 +13,24 @@ class AgentProvider extends ChangeNotifier {
 
   Future<void> _loadAgentProfile() async {
     try {
-      // Call the function directly (without SecureStorage. prefix)
       final agent = await readAgentProfile();
 
       if (agent != null) {
         _currentAgent = agent;
       } else {
-        // Use default data if no profile saved
         _currentAgent = Agent(
           name: 'Agent Name',
           email: 'name@gmail.com',
           phone: '+216 25 485 865',
           agency: 'RentCar',
         );
-        // Save default data
+
         await saveAgentProfile(_currentAgent!);
       }
       notifyListeners();
     } catch (e) {
       print('Erreur lors du chargement du profil agent: $e');
-      // Fallback to default data
+
       _currentAgent = Agent(
         name: 'Agent Name',
         email: 'name@gmail.com',

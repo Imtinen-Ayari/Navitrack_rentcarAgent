@@ -22,7 +22,6 @@ class ThemeProvider extends ChangeNotifier {
     _themeMode = themeMode;
     notifyListeners();
 
-    // Sauvegarder la préférence
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt('themeMode', themeMode.index);
   }
@@ -33,7 +32,6 @@ class ThemeProvider extends ChangeNotifier {
     } else if (_themeMode == ThemeMode.dark) {
       setTheme(ThemeMode.light);
     } else {
-      // Si c'est system, basculer vers l'opposé du thème actuel
       final brightness = WidgetsBinding.instance.window.platformBrightness;
       setTheme(
           brightness == Brightness.dark ? ThemeMode.light : ThemeMode.dark);

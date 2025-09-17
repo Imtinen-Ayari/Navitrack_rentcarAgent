@@ -6,7 +6,7 @@ class WelcomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // ✅ Fond blanc
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -69,7 +69,6 @@ class WelcomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 50),
 
-                // 🚀 Bouton professionnel
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pushNamed(context, '/login');

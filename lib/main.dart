@@ -5,7 +5,6 @@ import 'package:rent_car/Pages/SplachScreen.dart';
 import 'package:rent_car/Pages/WelcomePage.dart';
 import 'package:rent_car/Pages/SignIn.dart';
 import 'package:rent_car/theme/theme_notifier.dart';
-import 'package:rent_car/theme/app_theme.dart';
 import 'package:rent_car/services/Agent_provider.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();

@@ -1,122 +1,3 @@
-/*import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:rent_car/Pages/SignIn.dart';
-import 'package:rent_car/Pages/WelcomePage.dart';
-import 'package:rent_car/main.dart';
-
-final storage = FlutterSecureStorage();
-
-Future<String?> readToken() async {
-  try {
-    String? token = await storage.read(key: 'jwt_token');
-    return token;
-    ;
-  } catch (e) {
-    print('Error reading JWT token: $e');
-    return null;
-  }
-}
-
-Future<void> saveClientID(String clientID) async {
-  try {
-    await storage.write(key: 'client_id', value: clientID);
-  } catch (e) {
-    print('Error saving client ID: $e');
-  }
-}
-
-Future<void> saveUserID(String userID) async {
-  try {
-    await storage.write(key: 'user_id', value: userID);
-  } catch (e) {
-    print('Error saving user ID: $e');
-  }
-}
-
-Future<String?> readClientID() async {
-  try {
-    String? clientID = await storage.read(key: 'client_id');
-    return clientID;
-  } catch (e) {
-    print('Error reading client ID: $e');
-    return null;
-  }
-}
-
-Future<String?> readUserID() async {
-  try {
-    String? userID = await storage.read(key: 'user_id');
-    return userID;
-  } catch (e) {
-    print('Error reading user ID: $e');
-    return null;
-  }
-}
-
-Future<void> saveToken(String token) async {
-  try {
-    await storage.write(key: 'jwt_token', value: token);
-  } catch (e) {
-    print('Error saving JWT token: $e');
-  }
-}
-
-Future<void> deleteToken() async {
-  try {
-    await storage.delete(key: 'jwt_token');
-  } catch (e) {
-    print('Error deleting JWT token: $e');
-  }
-}
-
-Future<void> deleteClientID() async {
-  try {
-    await storage.delete(key: 'client_id');
-  } catch (e) {
-    print('Error deleting client ID: $e');
-  }
-}
-
-Future<void> deleteUserID() async {
-  try {
-    await storage.delete(key: 'user_id');
-  } catch (e) {
-    print('Error deleting user ID: $e');
-  }
-}
-
-void logout() async {
-  print('🔴 Début du logout');
-  try {
-    await deleteToken();
-    print('✅ Token supprimé');
-
-    await deleteClientID();
-    print('✅ Client ID supprimé');
-
-    await deleteUserID();
-    print('✅ User ID supprimé');
-
-    print('🔁 Navigation vers la première page');
-    navigatorKey.currentState?.popUntil((route) => route.isFirst);
-
-    print('➡️ Redirection vers SignInPage');
-    navigatorKey.currentState?.pushReplacement(
-      MaterialPageRoute(builder: (context) => WelcomePage()),
-    );
-
-    print('✅ Logout terminé avec succès');
-  } catch (e) {
-    print('❌ Erreur pendant le logout : $e');
-  }
-}
-
-Future<String?> getToken() async {
-  return await storage.read(key: 'jwt_token');
-}
-
-*/
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -126,8 +7,6 @@ import 'package:rent_car/Pages/WelcomePage.dart';
 import 'package:rent_car/main.dart';
 
 final storage = FlutterSecureStorage();
-
-// ... keep your existing token functions ...
 
 Future<String?> readToken() async {
   try {
@@ -245,7 +124,6 @@ Future<void> deleteAgentProfile() async {
   }
 }
 
-// 🔹 Keep the individual agent methods for backward compatibility if needed
 Future<void> saveAgentName(String name) async {
   try {
     await storage.write(key: 'agent_name', value: name);
@@ -320,8 +198,7 @@ Future<void> deleteAgentData() async {
     await storage.delete(key: 'agent_email');
     await storage.delete(key: 'agent_phone');
     await storage.delete(key: 'agent_agency');
-    await storage.delete(
-        key: 'agent_profile'); // Also delete the unified profile
+    await storage.delete(key: 'agent_profile');
   } catch (e) {
     print('Error deleting agent data: $e');
   }
@@ -339,7 +216,7 @@ void logout() async {
     await deleteUserID();
     print('✅ User ID supprimé');
 
-    await deleteAgentProfile(); // Use the new unified method
+    await deleteAgentProfile();
     print('✅ Agent profile supprimé');
 
     print('🔁 Navigation vers la première page');
@@ -358,4 +235,8 @@ void logout() async {
 
 Future<String?> getToken() async {
   return await storage.read(key: 'jwt_token');
+}
+
+Future<void> saveUserName(String name) async {
+  await storage.write(key: 'userName', value: name);
 }

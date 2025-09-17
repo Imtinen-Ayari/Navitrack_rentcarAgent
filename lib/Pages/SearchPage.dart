@@ -1,656 +1,4 @@
-/*
-import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:rent_car/Models/Contact.dart';
-import 'package:rent_car/services/Secure_Storage.dart';
-import "../.env.dart";
-import 'package:rent_car/Widgets/BaseScaffold.dart';
-import 'package:rent_car/Pages/ContractDetails.dart';
-
-class ContratSearchPage extends StatefulWidget {
-  const ContratSearchPage({super.key});
-
-  @override
-  State<ContratSearchPage> createState() => _ContratSearchPageState();
-}
-
-class _ContratSearchPageState extends State<ContratSearchPage> {
-  bool isSearching = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return BaseScaffold(
-      title: "Recherche Contrats",
-      currentIndex: 1,
-      showFab: !isSearching,
-      body: ContratSearchPageContent(
-        onSearchFocus: () => setState(() => isSearching = true),
-        onSearchUnfocus: () => setState(() => isSearching = false),
-      ),
-    );
-  }
-}
-
-class ContratSearchPageContent extends StatefulWidget {
-  final VoidCallback onSearchFocus;
-  final VoidCallback onSearchUnfocus;
-
-  const ContratSearchPageContent({
-    super.key,
-    required this.onSearchFocus,
-    required this.onSearchUnfocus,
-  });
-
-  @override
-  State<ContratSearchPageContent> createState() =>
-      _ContratSearchPageContentState();
-}
-
-class _ContratSearchPageContentState extends State<ContratSearchPageContent> {
-  List<Contrat> allContrats = [];
-  List<Contrat> filteredContrats = [];
-
-  String searchText = '';
-  String selectedFilter = 'Contract number';
-  final List<String> filterOptions = ['Contract number', 'Client', 'Vehicle'];
-
-  bool isLoading = true;
-
-  final FocusNode _searchFocus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    fetchContrats();
-
-    _searchFocus.addListener(() {
-      if (_searchFocus.hasFocus) {
-        widget.onSearchFocus();
-      } else {
-        widget.onSearchUnfocus();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchFocus.dispose();
-    super.dispose();
-  }
-
-  Future<void> fetchContrats() async {
-    try {
-      final token = await readToken();
-      final userId = await readClientID();
-
-      final response = await http.get(
-        Uri.parse(
-            "$apiUrl/api/cubeIT/NaviTrack/rest/contrat-location/getall-by-user/$userId"),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List data = json.decode(response.body);
-        final contratsFromApi =
-            data.map((json) => Contrat.fromJson(json)).toList();
-
-        setState(() {
-          allContrats = contratsFromApi.cast<Contrat>();
-          filteredContrats = allContrats;
-          isLoading = false;
-        });
-      } else {
-        throw Exception("Erreur ${response.statusCode}");
-      }
-    } catch (e) {
-      print("Erreur lors du fetch des contrats: $e");
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  void filterContrats() {
-    setState(() {
-      filteredContrats = allContrats.where((contrat) {
-        switch (selectedFilter) {
-          case 'Contract number':
-            return contrat.numeroContract
-                .toString()
-                .toLowerCase()
-                .contains(searchText.toLowerCase());
-          case 'Client':
-            return (contrat.conducteur?.nom ?? '')
-                .toLowerCase()
-                .contains(searchText.toLowerCase());
-          case 'Vehicle':
-            return (contrat.vehicule?.marque ?? '')
-                    .toLowerCase()
-                    .contains(searchText.toLowerCase()) ||
-                (contrat.vehicule?.model ?? '')
-                    .toLowerCase()
-                    .contains(searchText.toLowerCase());
-          default:
-            return true;
-        }
-      }).toList();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: Column(
-        children: [
-          // Row Search + Dropdown
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  focusNode: _searchFocus,
-                  decoration: InputDecoration(
-                    labelText: "Search",
-                    hintText: "Type to search...",
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Theme.of(context).cardColor,
-                  ),
-                  onChanged: (value) {
-                    searchText = value;
-                    filterContrats();
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                ),
-                child: DropdownButton<String>(
-                  value: selectedFilter,
-                  items: filterOptions
-                      .map((filter) => DropdownMenuItem(
-                            value: filter,
-                            child: Text(filter,
-                                style: TextStyle(
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.color)),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        selectedFilter = value;
-                        filterContrats();
-                      });
-                    }
-                  },
-                  underline: const SizedBox(),
-                  dropdownColor: Theme.of(context).cardColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Résultats
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredContrats.isEmpty
-                    ? const Center(child: Text("Aucun contrat trouvé"))
-                    : ListView.separated(
-                        itemCount: filteredContrats.length,
-                        separatorBuilder: (_, __) => Divider(
-                          color: Theme.of(context).dividerColor,
-                        ),
-                        itemBuilder: (context, index) {
-                          final contrat = filteredContrats[index];
-                          return ListTile(
-                            leading: Icon(Icons.assignment,
-                                color: Theme.of(context).colorScheme.primary),
-                            title: Text("Contrat n°${contrat.numeroContract}"),
-                            subtitle: Text(
-                              "Client: ${contrat.conducteur?.nom ?? 'N/A'}\n"
-                              "Vehicle: ${contrat.vehicule?.marque ?? ''} ${contrat.vehicule?.model ?? ''}",
-                            ),
-                            isThreeLine: true,
-                            trailing:
-                                const Icon(Icons.arrow_forward_ios, size: 16),
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      ContratDetailsPage(contrat: contrat),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:rent_car/Models/Contact.dart';
-import 'package:rent_car/services/Secure_Storage.dart';
-import "../.env.dart";
-import 'package:rent_car/Widgets/BaseScaffold.dart';
-import 'package:rent_car/Pages/ContractDetails.dart';
-import 'package:google_fonts/google_fonts.dart';
-
-class ContratSearchPage extends StatefulWidget {
-  const ContratSearchPage({super.key});
-
-  @override
-  State<ContratSearchPage> createState() => _ContratSearchPageState();
-}
-
-class _ContratSearchPageState extends State<ContratSearchPage> {
-  bool isSearching = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return BaseScaffold(
-      title: "Recherche Contrats",
-      currentIndex: 1,
-      showFab: !isSearching,
-      body: ContratSearchPageContent(
-        onSearchFocus: () => setState(() => isSearching = true),
-        onSearchUnfocus: () => setState(() => isSearching = false),
-      ),
-    );
-  }
-}
-
-class ContratSearchPageContent extends StatefulWidget {
-  final VoidCallback onSearchFocus;
-  final VoidCallback onSearchUnfocus;
-
-  const ContratSearchPageContent({
-    super.key,
-    required this.onSearchFocus,
-    required this.onSearchUnfocus,
-  });
-
-  @override
-  State<ContratSearchPageContent> createState() =>
-      _ContratSearchPageContentState();
-}
-
-class _ContratSearchPageContentState extends State<ContratSearchPageContent> {
-  List<Contrat> allContrats = [];
-  List<Contrat> filteredContrats = [];
-
-  String searchText = '';
-  String selectedFilter = 'Contract number';
-  final List<String> filterOptions = ['Contract number', 'Client', 'Vehicle'];
-
-  bool isLoading = true;
-
-  final FocusNode _searchFocus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    fetchContrats();
-
-    _searchFocus.addListener(() {
-      if (_searchFocus.hasFocus) {
-        widget.onSearchFocus();
-      } else {
-        widget.onSearchUnfocus();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchFocus.dispose();
-    super.dispose();
-  }
-
-  Future<void> fetchContrats() async {
-    try {
-      final token = await readToken();
-      final userId = await readClientID();
-
-      final response = await http.get(
-        Uri.parse(
-            "$apiUrl/api/cubeIT/NaviTrack/rest/contrat-location/getall-by-user/$userId"),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List data = json.decode(response.body);
-        final contratsFromApi =
-            data.map((json) => Contrat.fromJson(json)).toList();
-
-        setState(() {
-          allContrats = contratsFromApi.cast<Contrat>();
-          filteredContrats = allContrats;
-          isLoading = false;
-        });
-      } else {
-        throw Exception("Erreur ${response.statusCode}");
-      }
-    } catch (e) {
-      print("Erreur lors du fetch des contrats: $e");
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  void filterContrats() {
-    setState(() {
-      filteredContrats = allContrats.where((contrat) {
-        switch (selectedFilter) {
-          case 'Contract number':
-            return contrat.numeroContract
-                .toString()
-                .toLowerCase()
-                .contains(searchText.toLowerCase());
-          case 'Client':
-            return (contrat.conducteur?.nom ?? '')
-                .toLowerCase()
-                .contains(searchText.toLowerCase());
-          case 'Vehicle':
-            return (contrat.vehicule?.marque ?? '')
-                    .toLowerCase()
-                    .contains(searchText.toLowerCase()) ||
-                (contrat.vehicule?.model ?? '')
-                    .toLowerCase()
-                    .contains(searchText.toLowerCase());
-          default:
-            return true;
-        }
-      }).toList();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 🔍 Nouvelle barre de recherche moderne
-          Container(
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: TextField(
-              focusNode: _searchFocus,
-              style: GoogleFonts.plusJakartaSans(
-                color: Colors.white,
-                fontSize: 16,
-              ),
-              decoration: InputDecoration(
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: Colors.white,
-                  size: 22,
-                ),
-                suffixIcon: searchText.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear,
-                            color: Colors.white70, size: 20),
-                        onPressed: () {
-                          setState(() {
-                            searchText = '';
-                            filteredContrats = allContrats;
-                          });
-                          _searchFocus.unfocus();
-                        },
-                      )
-                    : null,
-                hintText: "Rechercher un contrat...",
-                hintStyle: GoogleFonts.plusJakartaSans(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 18),
-              ),
-              onChanged: (value) {
-                searchText = value;
-                filterContrats();
-              },
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Chips de filtres
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: filterOptions.map((filter) {
-                final isSelected = selectedFilter == filter;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedFilter = filter;
-                      filterContrats();
-                    });
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFF8B5CF6)
-                          : const Color(0xFF374151),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color(0xFF8B5CF6)
-                            : Colors.grey.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Text(
-                      filter,
-                      style: GoogleFonts.plusJakartaSans(
-                        color:
-                            isSelected ? Colors.white : const Color(0xFF9CA3AF),
-                        fontSize: 14,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Résultats
-          if (searchText.isNotEmpty) ...[
-            Text(
-              '${filteredContrats.length} résultat(s) trouvé(s)',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                color: const Color(0xFF9CA3AF),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-
-          Expanded(
-            child: isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF8B5CF6),
-                    ),
-                  )
-                : filteredContrats.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.search_off,
-                              size: 64,
-                              color: Color(0xFF6B7280),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              searchText.isEmpty
-                                  ? "Commencez à taper pour rechercher"
-                                  : "Aucun contrat trouvé",
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFD1D5DB),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              searchText.isEmpty
-                                  ? "Utilisez les filtres pour affiner votre recherche"
-                                  : "Essayez avec d'autres mots-clés",
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 14,
-                                color: Color(0xFF9CA3AF),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: filteredContrats.length,
-                        itemBuilder: (context, index) {
-                          final contrat = filteredContrats[index];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2D2D2D),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.grey.withOpacity(0.2),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.all(16),
-                              leading: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFF8B5CF6).withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.assignment,
-                                  color: Color(0xFF8B5CF6),
-                                  size: 24,
-                                ),
-                              ),
-                              title: Text(
-                                "Contrat n°${contrat.numeroContract}",
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Client: ${contrat.conducteur?.nom ?? 'N/A'}",
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 14,
-                                        color: const Color(0xFFD1D5DB),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Véhicule: ${contrat.vehicule?.marque ?? ''} ${contrat.vehicule?.model ?? ''}",
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 14,
-                                        color: const Color(0xFFD1D5DB),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 16,
-                                color: Color(0xFF6B7280),
-                              ),
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        ContratDetailsPage(contrat: contrat),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-          ),
-        ],
-      ),
-    );
-  }
-}*/
-import 'dart:convert';
+/*import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:rent_car/Models/Contact.dart';
@@ -782,12 +130,10 @@ class _ContratSearchPageContentState extends State<ContratSearchPageContent> {
                 .toLowerCase()
                 .contains(searchText.toLowerCase());
           case 'Vehicle':
-            return (contrat.vehicule?.marque ?? '')
-                    .toLowerCase()
-                    .contains(searchText.toLowerCase()) ||
-                (contrat.vehicule?.model ?? '')
-                    .toLowerCase()
-                    .contains(searchText.toLowerCase());
+            return (contrat.vehicule?.matricule ?? '')
+                .toLowerCase()
+                .contains(searchText.toLowerCase());
+
           default:
             return true;
         }
@@ -1323,7 +669,7 @@ class _ContratSearchPageContentState extends State<ContratSearchPageContent> {
               _buildSubtitleRow(
                 context,
                 'Véhicule',
-                '${contrat.vehicule?.marque ?? ''} ${contrat.vehicule?.model ?? ''}',
+                '${contrat.vehicule?.matricule ?? ''}',
               ),
               const SizedBox(height: 4),
               _buildSubtitleRow(
@@ -1375,6 +721,592 @@ class _ContratSearchPageContentState extends State<ContratSearchPageContent> {
           ),
         ),
       ],
+    );
+  }
+}
+*/
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:google_fonts/google_fonts.dart';
+import 'package:rent_car/Models/Contact.dart';
+import 'package:rent_car/Pages/ContractDetails.dart';
+import 'package:rent_car/Widgets/BaseScaffold.dart';
+import 'package:rent_car/services/Secure_Storage.dart';
+import "../.env.dart";
+
+class ContratSearchPage extends StatefulWidget {
+  const ContratSearchPage({super.key});
+
+  @override
+  State<ContratSearchPage> createState() => _ContratSearchPageState();
+}
+
+class _ContratSearchPageState extends State<ContratSearchPage> {
+  bool isSearching = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return BaseScaffold(
+      title: "Recherche Contrats",
+      currentIndex: 1,
+      showFab: !isSearching,
+      body: ContratSearchPageContent(
+        onSearchFocus: () => setState(() => isSearching = true),
+        onSearchUnfocus: () => setState(() => isSearching = false),
+      ),
+    );
+  }
+}
+
+class ContratSearchPageContent extends StatefulWidget {
+  final VoidCallback onSearchFocus;
+  final VoidCallback onSearchUnfocus;
+
+  const ContratSearchPageContent({
+    super.key,
+    required this.onSearchFocus,
+    required this.onSearchUnfocus,
+  });
+
+  @override
+  State<ContratSearchPageContent> createState() =>
+      _ContratSearchPageContentState();
+}
+
+class _ContratSearchPageContentState extends State<ContratSearchPageContent> {
+  List<Contrat> allContrats = [];
+  List<Contrat> filteredContrats = [];
+  List<String> searchSuggestions = [];
+
+  String searchText = '';
+  String selectedFilter = 'Contract number';
+  final List<String> filterOptions = ['Contract number', 'Client', 'Vehicle'];
+
+  bool isLoading = true;
+  bool showSuggestions = false;
+  Timer? _debounceTimer;
+
+  final FocusNode _searchFocus = FocusNode();
+  final TextEditingController _searchController = TextEditingController();
+  final LayerLink _layerLink = LayerLink();
+
+  @override
+  void initState() {
+    super.initState();
+    fetchContrats();
+
+    _searchFocus.addListener(() {
+      if (_searchFocus.hasFocus) {
+        widget.onSearchFocus();
+        setState(() {
+          showSuggestions = searchText.isNotEmpty;
+        });
+      } else {
+        widget.onSearchUnfocus();
+        Future.delayed(const Duration(milliseconds: 150), () {
+          if (mounted) setState(() => showSuggestions = false);
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchFocus.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> fetchContrats() async {
+    try {
+      final token = await readToken();
+      final userId = await readClientID();
+      final response = await http.get(
+        Uri.parse(
+            "$apiUrl/api/cubeIT/NaviTrack/rest/contrat-location/getall-by-user/$userId"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        final contratsFromApi =
+            data.map((json) => Contrat.fromJson(json)).toList();
+        setState(() {
+          allContrats = contratsFromApi.cast<Contrat>();
+          filteredContrats = allContrats;
+          isLoading = false;
+        });
+      } else {
+        throw Exception("Erreur ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Erreur lors du fetch des contrats: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {
+      searchText = value;
+    });
+
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        filterContrats();
+        generateSuggestions();
+      }
+    });
+
+    setState(() {
+      showSuggestions = value.isNotEmpty && _searchFocus.hasFocus;
+    });
+  }
+
+  String getSearchValue(Contrat contrat) {
+    switch (selectedFilter) {
+      case 'Contract number':
+        return contrat.numeroContract.toString();
+      case 'Client':
+        return contrat.conducteur?.nom ?? '';
+      case 'Vehicle':
+        return contrat.vehicule?.matricule ?? '';
+      default:
+        return '';
+    }
+  }
+
+  void filterContrats() {
+    setState(() {
+      filteredContrats = allContrats.where((contrat) {
+        return getSearchValue(contrat)
+            .toLowerCase()
+            .contains(searchText.toLowerCase());
+      }).toList();
+    });
+  }
+
+  void generateSuggestions() {
+    if (searchText.isEmpty) {
+      setState(() => searchSuggestions = []);
+      return;
+    }
+
+    final Set<String> suggestions = {};
+    for (var contrat in allContrats) {
+      final value = getSearchValue(contrat);
+      if (value.toLowerCase().contains(searchText.toLowerCase())) {
+        suggestions.add(value);
+      }
+    }
+
+    setState(() {
+      searchSuggestions = suggestions.take(5).toList();
+    });
+  }
+
+  void _selectSuggestion(String suggestion) {
+    setState(() {
+      searchText = suggestion;
+      _searchController.text = suggestion;
+      showSuggestions = false;
+    });
+    _searchFocus.unfocus();
+    filterContrats();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Stack(
+      children: [
+        Column(
+          children: [
+            // Header avec recherche
+            Container(
+              color: isDark ? Colors.grey[900] : Colors.grey[50],
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  CompositedTransformTarget(
+                    link: _layerLink,
+                    child: _buildSearchField(),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFilterDropdown(),
+                ],
+              ),
+            ),
+
+            // Résultats
+            if (searchText.isNotEmpty && !showSuggestions)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: isDark ? Colors.grey[800] : Colors.blue[50],
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: isDark ? Colors.blue[300] : Colors.blue[700],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${filteredContrats.length} contrat(s) trouvé(s)',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.blue[300] : Colors.blue[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Liste des contrats
+            Expanded(
+              child: _buildContractsList(),
+            ),
+          ],
+        ),
+
+        // Overlay des suggestions
+        if (showSuggestions && searchSuggestions.isNotEmpty)
+          _buildSuggestionsOverlay(),
+      ],
+    );
+  }
+
+  Widget _buildSearchField() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[800] : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        focusNode: _searchFocus,
+        style: GoogleFonts.inter(
+          fontSize: 16,
+          color: isDark ? Colors.white : Colors.black87,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Rechercher un contrat...',
+          hintStyle: GoogleFonts.inter(
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+          ),
+          suffixIcon: searchText.isNotEmpty
+              ? IconButton(
+                  icon: Icon(
+                    Icons.clear,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      searchText = '';
+                      _searchController.clear();
+                      filteredContrats = allContrats;
+                      showSuggestions = false;
+                    });
+                  },
+                )
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: isDark ? Colors.grey[800] : Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+        ),
+        onChanged: _onSearchChanged,
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Row(
+      children: [
+        Text(
+          'Rechercher par: ',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: isDark ? Colors.grey[300] : Colors.grey[700],
+          ),
+        ),
+        const SizedBox(width: 8),
+        DropdownButton<String>(
+          value: selectedFilter,
+          dropdownColor: isDark ? Colors.grey[800] : Colors.white,
+          items: filterOptions.map((filter) {
+            return DropdownMenuItem<String>(
+              value: filter,
+              child: Text(
+                filter,
+                style: GoogleFonts.inter(
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                selectedFilter = value;
+              });
+              if (searchText.isNotEmpty) {
+                filterContrats();
+                generateSuggestions();
+              }
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSuggestionsOverlay() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return CompositedTransformFollower(
+      link: _layerLink,
+      showWhenUnlinked: false,
+      offset: const Offset(0, 64),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.grey[800] : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: searchSuggestions.length,
+          separatorBuilder: (_, __) => Divider(
+            height: 1,
+            color: isDark ? Colors.grey[700] : Colors.grey[300],
+          ),
+          itemBuilder: (context, index) {
+            final suggestion = searchSuggestions[index];
+            return ListTile(
+              dense: true,
+              leading: Icon(
+                Icons.search,
+                size: 18,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+              title: Text(
+                suggestion,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              onTap: () => _selectSuggestion(suggestion),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContractsList() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (filteredContrats.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              searchText.isEmpty ? Icons.search : Icons.search_off,
+              size: 64,
+              color: isDark ? Colors.grey[600] : Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              searchText.isEmpty
+                  ? "Rechercher un contrat"
+                  : "Aucun contrat trouvé",
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              searchText.isEmpty
+                  ? "Utilisez la barre de recherche ci-dessus"
+                  : "Essayez avec d'autres mots-clés",
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: isDark ? Colors.grey[500] : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: filteredContrats.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final contrat = filteredContrats[index];
+        return _buildContractItem(contrat);
+      },
+    );
+  }
+
+  Widget _buildContractItem(Contrat contrat) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      elevation: isDark ? 2 : 1,
+      color: isDark ? Colors.grey[800] : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.blue[900] : Colors.blue[50],
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            Icons.description,
+            color: isDark ? Colors.blue[300] : Colors.blue[700],
+            size: 20,
+          ),
+        ),
+        title: Text(
+          "Contrat N°${contrat.numeroContract}",
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.person_outline,
+                    size: 16,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    contrat.conducteur?.nom ?? 'N/A',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.directions_car_outlined,
+                    size: 16,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    contrat.vehicule?.matricule ?? 'N/A',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.monetization_on_outlined,
+                    size: 16,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${contrat.totalTTc.toString()} DT',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.green[300] : Colors.green[700],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: isDark ? Colors.grey[500] : Colors.grey[600],
+        ),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ContratDetailsPage(contrat: contrat),
+            ),
+          );
+        },
+      ),
     );
   }
 }

@@ -15,20 +15,71 @@ class ContactListPage extends StatefulWidget {
 }
 
 class _ContactListPageState extends State<ContactListPage> {
-  Future<List<Contrat>> loadContracts() async {
+  final ScrollController _scrollController = ScrollController();
+  List<Contrat> _allContracts = [];
+  List<Contrat> _visibleContracts = [];
+  int _itemsPerPage = 10;
+  int _currentIndex = 0;
+  bool _isLoading = false;
+  bool _isInitialLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllContracts();
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
+          !_isLoading) {
+        _loadMore();
+      }
+    });
+  }
+
+  Future<void> _loadAllContracts() async {
+    setState(() {
+      _isInitialLoading = true;
+    });
+
     try {
       String? clientID = await readClientID();
       String? token = await readToken();
       if (clientID == null || token == null) {
-        print("❌ Token ou clientID manquant");
         logout();
-        return [];
+        return;
       }
-      return await getContartsByClient_Id(clientID, token);
+
+      List<Contrat> data = await getContartsByClient_Id(clientID, token);
+
+      // 🔽 Tri décroissant par date de départ
+      data.sort((a, b) => b.dateDepart!.compareTo(a.dateDepart!));
+
+      setState(() {
+        _allContracts = data;
+      });
+
+      _loadMore();
     } catch (e) {
-      print("Error loading contracts: $e");
-      return [];
+      print("Erreur lors du chargement: $e");
+    } finally {
+      setState(() {
+        _isInitialLoading = false;
+      });
     }
+  }
+
+  void _loadMore() {
+    if (_currentIndex >= _allContracts.length) return;
+
+    setState(() {
+      _isLoading = true;
+      final nextIndex =
+          (_currentIndex + _itemsPerPage).clamp(0, _allContracts.length);
+      _visibleContracts.addAll(_allContracts.sublist(_currentIndex, nextIndex));
+      _currentIndex = nextIndex;
+      _isLoading = false;
+    });
   }
 
   @override
@@ -38,287 +89,254 @@ class _ContactListPageState extends State<ContactListPage> {
     return Scaffold(
       appBar: AppTheme.buildRoundedAppBar(context, 'Contracts'),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: FutureBuilder<List<Contrat>>(
-        future: loadContracts(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
+      body: _isInitialLoading
+          ? Center(
               child: CircularProgressIndicator(
                 color: Theme.of(context).primaryColor,
               ),
-            );
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red.withOpacity(0.8),
+            )
+          : _visibleContracts.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.assignment_outlined,
+                        size: 64,
+                        color: isDark ? Colors.grey[600] : Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Aucun contrat trouvé',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Vos contrats apparaîtront ici',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          color: isDark ? Colors.white54 : Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Erreur lors du chargement',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.red[300] : Colors.red[700],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Veuillez réessayer plus tard',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      color: isDark ? Colors.white60 : Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-            final contracts = snapshot.data!;
-            return ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              itemCount: contracts.length,
-              itemBuilder: (context, index) {
-                final contrat = contracts[index];
-                return Hero(
-                  tag: "contract_${contrat.numeroContract}",
-                  child: Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    elevation: isDark ? 8 : 4,
-                    color: isDark ? const Color(0xFF2D2D2D) : Colors.white,
-                    shadowColor: isDark
-                        ? Colors.black.withOpacity(0.5)
-                        : Colors.grey.withOpacity(0.2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: isDark
-                          ? BorderSide(color: Colors.grey.withOpacity(0.2))
-                          : BorderSide.none,
-                    ),
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                ContratDetailsPage(contrat: contrat),
-                          ),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                )
+              : ListView.builder(
+                  controller: _scrollController,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  itemCount: _visibleContracts.length +
+                      (_currentIndex < _allContracts.length ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _visibleContracts.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    final contrat = _visibleContracts[index];
+                    return Hero(
+                      tag: "contract_${contrat.numeroContract}",
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        elevation: isDark ? 8 : 4,
+                        color: isDark ? const Color(0xFF2D2D2D) : Colors.white,
+                        shadowColor: isDark
+                            ? Colors.black.withOpacity(0.5)
+                            : Colors.grey.withOpacity(0.2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: isDark
+                              ? BorderSide(color: Colors.grey.withOpacity(0.2))
+                              : BorderSide.none,
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ContratDetailsPage(contrat: contrat),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Contrat N° ${contrat.numeroContract}',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18,
+                                              color: isDark
+                                                  ? Colors.white
+                                                  : Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: isDark
+                                                  ? Colors.deepPurple
+                                                      .withOpacity(0.2)
+                                                  : Colors.blue
+                                                      .withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              '${contrat.nbJours} jours',
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: isDark
+                                                    ? Colors.deepPurple[300]
+                                                    : Colors.blue[700],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 18,
+                                      color:
+                                          isDark ? Colors.white54 : Colors.grey,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                _buildInfoRow(
+                                  context,
+                                  Icons.person,
+                                  'Conducteur principal',
+                                  contrat.conducteur?.nom ?? "Inconnu",
+                                  isDark,
+                                ),
+                                if (contrat.conducteur2 != null) ...[
+                                  const SizedBox(height: 12),
+                                  _buildInfoRow(
+                                    context,
+                                    Icons.person_outline,
+                                    'Conducteur secondaire',
+                                    contrat.conducteur2?.nom ?? "Inconnu",
+                                    isDark,
+                                  ),
+                                ],
+                                const SizedBox(height: 12),
+                                _buildInfoRow(
+                                  context,
+                                  Icons.directions_car,
+                                  'Véhicule',
+                                  contrat.vehicule?.matricule ?? "Inconnu",
+                                  isDark,
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? Colors.grey[900]?.withOpacity(0.5)
+                                        : Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _buildDateRow(
+                                        context,
+                                        Icons.flight_takeoff,
+                                        'Départ',
+                                        contrat.dateDepart,
+                                        isDark,
+                                        Colors.green,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildDateRow(
+                                        context,
+                                        Icons.flight_land,
+                                        'Retour',
+                                        contrat.dateRetour,
+                                        isDark,
+                                        Colors.orange,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: isDark
+                                          ? [
+                                              Colors.deepPurple
+                                                  .withOpacity(0.2),
+                                              Colors.deepPurple.withOpacity(0.1)
+                                            ]
+                                          : [
+                                              Colors.blue.withOpacity(0.1),
+                                              Colors.blue.withOpacity(0.05)
+                                            ],
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        'Contrat N° ${contrat.numeroContract}',
+                                        'Total TTC',
                                         style: GoogleFonts.plusJakartaSans(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
                                           color: isDark
-                                              ? Colors.white
+                                              ? Colors.white70
                                               : Colors.black87,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
+                                      Text(
+                                        '${contrat.totalTTc} DT',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
                                           color: isDark
-                                              ? Colors.deepPurple
-                                                  .withOpacity(0.2)
-                                              : Colors.blue.withOpacity(0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          '${contrat.nbJours} jours',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: isDark
-                                                ? Colors.deepPurple[300]
-                                                : Colors.blue[700],
-                                          ),
+                                              ? Colors.deepPurple[300]
+                                              : Colors.blue[700],
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Icon(
-                                  Icons.arrow_forward_ios,
-                                  size: 18,
-                                  color: isDark ? Colors.white54 : Colors.grey,
-                                ),
                               ],
                             ),
-
-                            const SizedBox(height: 20),
-
-                            _buildInfoRow(
-                              context,
-                              Icons.person,
-                              'Conducteur principal',
-                              contrat.conducteur?.nom ?? "Inconnu",
-                              isDark,
-                            ),
-
-                            if (contrat.conducteur2 != null) ...[
-                              const SizedBox(height: 12),
-                              _buildInfoRow(
-                                context,
-                                Icons.person_outline,
-                                'Conducteur secondaire',
-                                contrat.conducteur2?.nom ?? "Inconnu",
-                                isDark,
-                              ),
-                            ],
-
-                            const SizedBox(height: 12),
-                            _buildInfoRow(
-                              context,
-                              Icons.directions_car,
-                              'Véhicule',
-                              contrat.vehicule?.matricule ?? "Inconnu",
-                              isDark,
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? Colors.grey[900]?.withOpacity(0.5)
-                                    : Colors.grey[50],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                children: [
-                                  _buildDateRow(
-                                    context,
-                                    Icons.flight_takeoff,
-                                    'Départ',
-                                    contrat.dateDepart,
-                                    isDark,
-                                    Colors.green,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _buildDateRow(
-                                    context,
-                                    Icons.flight_land,
-                                    'Retour',
-                                    contrat.dateRetour,
-                                    isDark,
-                                    Colors.orange,
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // Total avec mise en valeur
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: isDark
-                                      ? [
-                                          Colors.deepPurple.withOpacity(0.2),
-                                          Colors.deepPurple.withOpacity(0.1)
-                                        ]
-                                      : [
-                                          Colors.blue.withOpacity(0.1),
-                                          Colors.blue.withOpacity(0.05)
-                                        ],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Total TTC',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${contrat.totalTTc} DT',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark
-                                          ? Colors.deepPurple[300]
-                                          : Colors.blue[700],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                );
-              },
-            );
-          } else {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.assignment_outlined,
-                    size: 64,
-                    color: isDark ? Colors.grey[600] : Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucun contrat trouvé',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white70 : Colors.black54,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Vos contrats apparaîtront ici',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      color: isDark ? Colors.white54 : Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-        },
-      ),
+                    );
+                  },
+                ),
     );
   }
 

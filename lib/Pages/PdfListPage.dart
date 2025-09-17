@@ -1,97 +1,9 @@
-/*import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
-import 'package:google_fonts/google_fonts.dart';
-
-class PdfListPage extends StatefulWidget {
-  const PdfListPage({Key? key}) : super(key: key);
-
-  @override
-  _PdfListPageState createState() => _PdfListPageState();
-}
-
-class _PdfListPageState extends State<PdfListPage> {
-  List<FileSystemEntity> pdfFiles = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPdfFiles();
-  }
-
-  Future<void> _loadPdfFiles() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final allFiles = directory.listSync();
-
-    // Filtrer uniquement les fichiers PDF
-    final pdfs = allFiles.where((file) {
-      return file.path.endsWith(".pdf");
-    }).toList();
-
-    setState(() {
-      pdfFiles = pdfs;
-    });
-  }
-
-  Future<void> _openPdf(String path) async {
-    if (File(path).existsSync()) {
-      await OpenFile.open(path);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("PDF introuvable !")),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Liste des PDFs"),
-      ),
-      body: pdfFiles.isEmpty
-          ? Center(
-              child: Text(
-                "Aucun PDF trouvé",
-                style: GoogleFonts.plusJakartaSans(fontSize: 16),
-              ),
-            )
-          : ListView.builder(
-              itemCount: pdfFiles.length,
-              itemBuilder: (context, index) {
-                final file = pdfFiles[index];
-                final fileName = file.path.split('/').last;
-
-                return ListTile(
-                  leading: Icon(Icons.picture_as_pdf,
-                      color: isDark ? Colors.red[300] : Colors.red),
-                  title: Text(
-                    fileName,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 14),
-                  ),
-                  trailing: Icon(Icons.open_in_new),
-                  onTap: () => _openPdf(file.path),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.refresh),
-        onPressed: _loadPdfFiles,
-        tooltip: "Rafraîchir la liste",
-      ),
-    );
-  }
-}
-*/
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:rent_car/theme/app_theme.dart'; // Importez votre AppTheme
+import 'package:rent_car/theme/app_theme.dart';
 
 class PdfListPage extends StatefulWidget {
   const PdfListPage({Key? key}) : super(key: key);
@@ -124,7 +36,7 @@ class _PdfListPageState extends State<PdfListPage> {
         return file.path.endsWith(".pdf");
       }).toList();
 
-      // Trier par date de modification (plus récent en premier)
+      // Trier par date de modification
       pdfs.sort((a, b) {
         final statA = FileStat.statSync(a.path);
         final statB = FileStat.statSync(b.path);
@@ -246,7 +158,6 @@ class _PdfListPageState extends State<PdfListPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Header avec icône PDF
                                 Row(
                                   children: [
                                     Container(
